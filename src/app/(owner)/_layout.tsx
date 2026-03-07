@@ -65,6 +65,12 @@ export default function OwnerLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null,
+        }}
+      />
 
     </Tabs>
   );
