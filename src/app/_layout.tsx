@@ -31,7 +31,18 @@ function useProtectedRoute() {
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Safety timeout — if auth never resolves (e.g. bad keys), stop loading
+    const timeout = setTimeout(() => {
+      if (isLoading) {
+        logger.warn('Auth state did not resolve in time, defaulting to unauthenticated');
+        setLoading(false);
+      }
+    }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   // Handle navigation based on auth state

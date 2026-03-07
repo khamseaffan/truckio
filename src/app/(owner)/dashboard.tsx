@@ -8,7 +8,6 @@ export default function OwnerDashboard() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>Good morning 👋</Text>
         <Text style={styles.title}>Dashboard</Text>
       </View>
 
