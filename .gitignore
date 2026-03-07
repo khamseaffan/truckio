@@ -17,6 +17,7 @@ web-build/
 .env
 .env.local
 .env.production
+.dev.env
 .env.*
 !.env.example
 web/.env*
