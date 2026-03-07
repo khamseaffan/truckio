@@ -1,26 +1,43 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/services/supabase/client';
+import { useAuthStore } from '@/store/authStore';
 import { logger } from '@/shared/utils/logger';
 
 /** First-time owner setup — business name, invoice numbering preference */
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { user, setRole } = useAuthStore();
   const [businessName, setBusinessName] = useState('');
   const [invoiceAuto, setInvoiceAuto] = useState(true);
   const [invoicePrefix, setInvoicePrefix] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleComplete = async () => {
-    if (!businessName.trim()) return;
+    if (!businessName.trim() || !user) return;
     setLoading(true);
 
     try {
-      // TODO: Create owner record in Supabase
-      logger.info('Onboarding complete:', { businessName, invoiceAuto, invoicePrefix });
+      const { error } = await supabase.from('owners').insert({
+        user_id: user.id,
+        business_name: businessName.trim(),
+        phone: user.phone || '',
+        email: user.email || '',
+        invoice_auto_number: invoiceAuto,
+        invoice_prefix: invoicePrefix.trim() || null,
+        plan_tier: 'starter',
+        plan_status: 'active',
+      });
+
+      if (error) throw error;
+
+      setRole('owner');
+      logger.info('Onboarding complete — owner record created');
       router.replace('/(owner)/dashboard');
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Onboarding failed:', err);
+      Alert.alert('Error', err.message || 'Failed to save. Try again.');
     } finally {
       setLoading(false);
     }

@@ -1,12 +1,35 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Share, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/store/authStore';
+import { logger } from '@/shared/utils/logger';
 
 export default function DriversListScreen() {
+  const { user } = useAuthStore();
+
+  const handleInvite = async () => {
+    try {
+      // In production, this would be a deep link with owner's ID
+      const inviteMessage = `Join my fleet on Trukio! Download the app and use my invite code: ${user?.id?.slice(0, 8).toUpperCase() || 'TRUKIO'}`;
+
+      const result = await Share.share({
+        message: inviteMessage,
+        title: 'Invite Driver to Trukio',
+      });
+
+      if (result.action === Share.sharedAction) {
+        logger.info('Driver invite shared');
+      }
+    } catch (err: any) {
+      logger.error('Share failed:', err);
+      Alert.alert('Error', 'Could not open share sheet');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Drivers</Text>
-        <Pressable style={styles.addButton}>
+        <Pressable style={styles.addButton} onPress={handleInvite}>
           <Text style={styles.addButtonText}>+ Invite</Text>
         </Pressable>
       </View>

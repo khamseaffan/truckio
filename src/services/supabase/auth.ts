@@ -26,17 +26,18 @@ export async function verifyOtp(phone: string, token: string) {
 }
 
 /** Sign in with Google (ID token from Google Sign-In) */
-export async function signInWithGoogle(idToken: string) {
-  const { data, error } = await supabase.auth.signInWithIdToken({
-    provider: 'google',
-    token: idToken,
-  });
-  if (error) {
-    logger.error('Google sign-in failed:', error.message);
-    throw error;
-  }
-  return data;
-}
+// Uncomment when Google provider is enabled in Supabase
+// export async function signInWithGoogle(idToken: string) {
+//   const { data, error } = await supabase.auth.signInWithIdToken({
+//     provider: 'google',
+//     token: idToken,
+//   });
+//   if (error) {
+//     logger.error('Google sign-in failed:', error.message);
+//     throw error;
+//   }
+//   return data;
+// }
 
 /** Get current session */
 export async function getSession() {

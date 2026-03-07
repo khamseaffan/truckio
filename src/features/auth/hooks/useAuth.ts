@@ -21,15 +21,16 @@ export function useAuth() {
     return data;
   }, []);
 
-  const signInWithGoogle = useCallback(async (idToken: string) => {
-    const data = await authService.signInWithGoogle(idToken);
-    if (data.session) {
-      setSession(data.session);
-      const role = await authService.fetchUserRole(data.session.user.id);
-      setRole(role);
-    }
-    return data;
-  }, []);
+  // --- Google Sign-In (uncomment when Google provider is enabled) ---
+  // const signInWithGoogle = useCallback(async (idToken: string) => {
+  //   const data = await authService.signInWithGoogle(idToken);
+  //   if (data.session) {
+  //     setSession(data.session);
+  //     const role = await authService.fetchUserRole(data.session.user.id);
+  //     setRole(role);
+  //   }
+  //   return data;
+  // }, []);
 
   const signOut = useCallback(async () => {
     await authService.signOut();
@@ -37,5 +38,5 @@ export function useAuth() {
     logger.info('User signed out');
   }, []);
 
-  return { sendOtp, verifyOtp, signInWithGoogle, signOut };
+  return { sendOtp, verifyOtp, /* signInWithGoogle, */ signOut };
 }

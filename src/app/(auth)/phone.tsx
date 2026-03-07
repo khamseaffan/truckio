@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { sendOtp } from '@/services/supabase/auth';
+// import { supabase } from '@/services/supabase/client';
+// import * as AuthSession from 'expo-auth-session';
+// import * as WebBrowser from 'expo-web-browser';
 import { logger } from '@/shared/utils/logger';
+
+// WebBrowser.maybeCompleteAuthSession();
 
 export default function PhoneScreen() {
   const router = useRouter();
@@ -31,6 +36,37 @@ export default function PhoneScreen() {
       setLoading(false);
     }
   };
+
+  // --- Google Sign-In (uncomment when Google provider is enabled in Supabase) ---
+  // const handleGoogleSignIn = async () => {
+  //   try {
+  //     setLoading(true);
+  //     setError('');
+  //     const redirectUrl = AuthSession.makeRedirectUri();
+  //     const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+  //       provider: 'google',
+  //       options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
+  //     });
+  //     if (oauthError) throw oauthError;
+  //     if (!data.url) throw new Error('No OAuth URL returned');
+  //     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+  //     if (result.type === 'success') {
+  //       const url = result.url;
+  //       const params = new URLSearchParams(url.split('#')[1] || '');
+  //       const accessToken = params.get('access_token');
+  //       const refreshToken = params.get('refresh_token');
+  //       if (accessToken && refreshToken) {
+  //         await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+  //         logger.info('Google Sign-In successful');
+  //       }
+  //     }
+  //   } catch (err: any) {
+  //     logger.error('Google Sign-In failed:', err);
+  //     setError(err.message || 'Google Sign-In failed. Try again.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <KeyboardAvoidingView
@@ -70,14 +106,11 @@ export default function PhoneScreen() {
           </Text>
         </Pressable>
 
-        <Text style={styles.divider}>or</Text>
-
-        <Pressable style={styles.googleButton} onPress={() => {
-          // TODO: Google Sign-In integration
-          logger.info('Google Sign-In tapped');
-        }}>
+        {/* Google Sign-In — uncomment when provider is enabled */}
+        {/* <Text style={styles.divider}>or</Text>
+        <Pressable style={styles.googleButton} onPress={handleGoogleSignIn}>
           <Text style={styles.googleButtonText}>Continue with Google</Text>
-        </Pressable>
+        </Pressable> */}
       </View>
     </KeyboardAvoidingView>
   );

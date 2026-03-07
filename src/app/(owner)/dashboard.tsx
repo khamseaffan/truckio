@@ -1,14 +1,44 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { signOut } from '@/services/supabase/auth';
+import { Ionicons } from '@expo/vector-icons';
+import { logger } from '@/shared/utils/logger';
 
 export default function OwnerDashboard() {
   const { user } = useAuthStore();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await signOut();
+            useAuthStore.getState().reset();
+            router.replace('/(auth)/phone');
+          } catch (err) {
+            logger.error('Sign out failed:', err);
+          }
+        },
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Dashboard</Text>
+        <View>
+          <Text style={styles.greeting}>Good morning 👋</Text>
+          <Text style={styles.title}>Dashboard</Text>
+        </View>
+        <Pressable onPress={handleSignOut} style={styles.signOutButton}>
+          <Ionicons name="log-out-outline" size={24} color="#8A8279" />
+        </Pressable>
       </View>
 
       <View style={styles.statsRow}>
@@ -48,6 +78,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingTop: 16,
     marginBottom: 24,
   },
@@ -55,6 +88,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8A8279',
     marginBottom: 4,
+  },
+  signOutButton: {
+    padding: 8,
   },
   title: {
     fontSize: 28,

@@ -55,12 +55,14 @@ function useProtectedRoute() {
       // Not signed in — redirect to auth
       router.replace('/(auth)/phone');
     } else if (isAuthenticated && inAuthGroup) {
-      // Signed in but still on auth screen — redirect to correct role
+      // Signed in but still on auth screen — redirect based on role
       if (role === 'driver') {
         router.replace('/(driver)/job');
-      } else {
-        // Default to owner (or onboarding if no role)
+      } else if (role === 'owner') {
         router.replace('/(owner)/dashboard');
+      } else {
+        // No role yet — send to onboarding
+        router.replace('/(auth)/onboarding');
       }
     }
   }, [isAuthenticated, role, isLoading, segments]);
