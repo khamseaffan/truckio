@@ -17,6 +17,9 @@ web-build/
 .env
 .env.local
 .env.production
+.env.*
+!.env.example
+web/.env*
 
 # IDE
 .vscode/
