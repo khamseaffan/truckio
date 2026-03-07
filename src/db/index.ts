@@ -1,0 +1,24 @@
+import { Database } from '@nozbe/watermelondb';
+import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
+import { schema } from './schema';
+// import migrations from './migrations'; // Enable when first migration exists
+
+import Order from './models/Order';
+import Job from './models/Job';
+import Driver from './models/Driver';
+import Invoice from './models/Invoice';
+import Notification from './models/Notification';
+
+const adapter = new SQLiteAdapter({
+  schema,
+  // migrations,
+  jsi: true, // Use JSI for better performance
+  onSetUpError: (error) => {
+    console.error('[DB] Setup error:', error);
+  },
+});
+
+export const database = new Database({
+  adapter,
+  modelClasses: [Order, Job, Driver, Invoice, Notification],
+});

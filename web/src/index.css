@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/*
+ * ──────────────────────────────────────────
+ *  TRUKIO DESIGN SYSTEM — Tailwind v4 Theme
+ * ──────────────────────────────────────────
+ *  Warm Sand + Deep Teal palette.
+ *  Use these as: bg-trukio-sand, text-trukio-charcoal, etc.
+ *
+ *  Palette roles:
+ *    sand       → primary page background
+ *    beige      → alternate section / card background
+ *    white      → card surface
+ *    charcoal   → primary text (headings)
+ *    warmgray   → secondary text (body)
+ *    muted      → tertiary text (captions, hints)
+ *    teal       → primary accent (buttons, links, icons)
+ *    teal-dark  → accent hover / pressed state
+ *    sage       → light accent background (badges, tags)
+ *    sage-mid   → accent borders
+ *    danger     → problem/error accent
+ *    danger-light → problem icon background
+ *    danger-border → problem icon border
+ *    tan        → default border color
+ *    dark       → footer / CTA dark background
+ *    dark-border → dark section borders
+ * ──────────────────────────────────────────
+ */
+
+@theme {
+  /* ── Brand Colors ── */
+  --color-trukio-sand: #FAF7F2;
+  --color-trukio-beige: #F3EDE4;
+  --color-trukio-white: #FFFFFF;
+
+  /* ── Text ── */
+  --color-trukio-charcoal: #2D2A26;
+  --color-trukio-warmgray: #8A8279;
+  --color-trukio-muted: #B5AFA6;
+
+  /* ── Accent ── */
+  --color-trukio-teal: #1A6B5A;
+  --color-trukio-teal-dark: #145546;
+  --color-trukio-sage: #E8F0ED;
+  --color-trukio-sage-mid: #C8DDD7;
+
+  /* ── Semantic ── */
+  --color-trukio-danger: #C4553A;
+  --color-trukio-danger-light: #FDF0EC;
+  --color-trukio-danger-border: #F0D5CC;
+
+  /* ── Neutral ── */
+  --color-trukio-tan: #E8E2D9;
+  --color-trukio-dark: #1F1D1A;
+  --color-trukio-dark-border: #2D2A26;
+
+  /* ── Feature Card Accent Colors ── */
+  --color-trukio-violet-bg: #F3EEFC;
+  --color-trukio-violet-border: #E0D4F5;
+  --color-trukio-violet: #6E4AB8;
+
+  --color-trukio-blue-bg: #EBF2FA;
+  --color-trukio-blue-border: #CCE0F5;
+  --color-trukio-blue: #3A6FA0;
+
+  --color-trukio-amber-bg: #FDF5E9;
+  --color-trukio-amber-border: #F5E3C0;
+  --color-trukio-amber: #A07335;
+
+  --color-trukio-orange-bg: #FEF2EC;
+  --color-trukio-orange-border: #F5D9C8;
+  --color-trukio-orange: #B85C3A;
+
+  --color-trukio-pink-bg: #FCEFF2;
+  --color-trukio-pink-border: #F5CED6;
+  --color-trukio-pink: #A0475C;
+
+  /* ── Typography ── */
+  --font-heading: "Syne", sans-serif;
+  --font-body: "DM Sans", sans-serif;
+}
+
+/*
+ * ──────────────────────────────────────────
+ *  Base Styles
+ * ──────────────────────────────────────────
+ */
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-trukio-sand);
+  color: var(--color-trukio-charcoal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
