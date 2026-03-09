@@ -6,13 +6,14 @@ import { schema } from './schema';
 import Order from './models/Order';
 import Job from './models/Job';
 import Driver from './models/Driver';
+import TeamMembership from './models/TeamMembership';
 import Invoice from './models/Invoice';
 import Notification from './models/Notification';
 
 const adapter = new SQLiteAdapter({
   schema,
   // migrations,
-  jsi: true, // Use JSI for better performance
+  jsi: false, // false = legacy bridge, compatible with Expo Go and development builds
   onSetUpError: (error) => {
     console.error('[DB] Setup error:', error);
   },
@@ -20,5 +21,5 @@ const adapter = new SQLiteAdapter({
 
 export const database = new Database({
   adapter,
-  modelClasses: [Order, Job, Driver, Invoice, Notification],
+  modelClasses: [Order, Job, Driver, TeamMembership, Invoice, Notification],
 });

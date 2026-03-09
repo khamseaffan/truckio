@@ -1,10 +1,16 @@
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/services/supabase/client';
 import { fetchUserRole } from '@/services/supabase/auth';
 import { logger } from '@/shared/utils/logger';
+import { database } from '@/db';
+import { syncManager } from '@/sync/SyncManager';
+import SyncBanner from '@/shared/components/SyncBanner';
+import OfflineBanner from '@/shared/components/OfflineBanner';
 
 /** Redirect based on auth state and role */
 function useProtectedRoute() {
@@ -25,6 +31,7 @@ function useProtectedRoute() {
           setRole(userRole);
         } else {
           setRole(null);
+          syncManager.stopAutoSync();
         }
 
         setLoading(false);
@@ -45,6 +52,13 @@ function useProtectedRoute() {
     };
   }, []);
 
+  // Start auto-sync once authenticated with a known role
+  useEffect(() => {
+    if (!isAuthenticated || !role || role === null) return;
+    syncManager.startAutoSync(database, supabase);
+    return () => syncManager.stopAutoSync();
+  }, [isAuthenticated, role]);
+
   // Handle navigation based on auth state
   useEffect(() => {
     if (isLoading) return;
@@ -52,16 +66,13 @@ function useProtectedRoute() {
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!isAuthenticated && !inAuthGroup) {
-      // Not signed in — redirect to auth
       router.replace('/(auth)/phone');
     } else if (isAuthenticated && inAuthGroup) {
-      // Signed in but still on auth screen — redirect based on role
       if (role === 'driver') {
         router.replace('/(driver)/job');
       } else if (role === 'owner') {
         router.replace('/(owner)/dashboard');
       } else {
-        // No role yet — send to onboarding
         router.replace('/(auth)/onboarding');
       }
     }
@@ -72,13 +83,17 @@ export default function RootLayout() {
   useProtectedRoute();
 
   return (
-    <>
+    <DatabaseProvider database={database}>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(owner)" />
-        <Stack.Screen name="(driver)" />
-      </Stack>
-    </>
+      <View style={{ flex: 1 }}>
+        <OfflineBanner />
+        <SyncBanner />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(owner)" />
+          <Stack.Screen name="(driver)" />
+        </Stack>
+      </View>
+    </DatabaseProvider>
   );
 }
