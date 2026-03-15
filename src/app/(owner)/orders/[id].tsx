@@ -167,7 +167,11 @@ export default function OrderDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <Text style={styles.backText}>← Back</Text>
           </Pressable>
         </View>
@@ -188,7 +192,11 @@ export default function OrderDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <Text style={styles.backText}>← Back</Text>
           </Pressable>
           <Badge
@@ -325,8 +333,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   backButton: {
-    paddingVertical: 4,
-    paddingRight: 12,
+    padding: 8,
+    marginLeft: -8,
   },
   backText: {
     fontSize: 16,

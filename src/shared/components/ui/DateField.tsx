@@ -18,10 +18,12 @@ export default function DateField({ label, value, onChange, placeholder = 'Selec
     : null;
 
   function handleChange(_evt: DateTimePickerEvent, date?: Date) {
-    if (Platform.OS === 'android') setOpen(false);
-    if (date) {
-      setTempDate(date);
-      onChange(date);
+    if (Platform.OS === 'android') {
+      setOpen(false);
+      if (date) onChange(date);
+    } else {
+      // iOS: only update temp; onChange fires when "Done" is pressed
+      if (date) setTempDate(date);
     }
   }
 
@@ -50,7 +52,13 @@ export default function DateField({ label, value, onChange, placeholder = 'Selec
           <View style={styles.overlay}>
             <View style={styles.pickerCard}>
               <View style={styles.pickerHeader}>
-                <Pressable onPress={() => setOpen(false)} style={styles.doneBtn}>
+                <Pressable onPress={() => setOpen(false)} style={styles.cancelBtn}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { onChange(tempDate); setOpen(false); }}
+                  style={styles.doneBtn}
+                >
                   <Text style={styles.doneText}>Done</Text>
                 </Pressable>
               </View>
@@ -108,11 +116,19 @@ const styles = StyleSheet.create({
   },
   pickerHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E8E2D9',
+  },
+  cancelBtn: {
+    padding: 4,
+  },
+  cancelText: {
+    fontSize: 17,
+    fontWeight: '400',
+    color: '#8B8580',
   },
   doneBtn: {
     padding: 4,

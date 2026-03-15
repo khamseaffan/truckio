@@ -32,7 +32,7 @@ export default function AddressInput({ label, value, onSelect, placeholder = 'Se
       <Modal visible={open} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modal} edges={['top']}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Search address</Text>
+            <Text style={styles.modalTitle}>{label}</Text>
             <Pressable onPress={() => setOpen(false)} style={styles.cancelBtn}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
