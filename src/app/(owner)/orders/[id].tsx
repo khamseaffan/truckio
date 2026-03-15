@@ -51,6 +51,7 @@ export default function OrderDetailScreen() {
   const [job, setJob] = useState<Job | null>(null);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [busyDriverIds, setBusyDriverIds] = useState<Set<string>>(new Set());
   const [assigning, setAssigning] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -80,8 +81,19 @@ export default function OrderDetailScreen() {
       .observe()
       .subscribe(records => setJob(records[0] ?? null));
 
-    // Load available drivers
-    Driver.getActiveDriversForOwner(database, session.user.id).then(setDrivers);
+    // Load available drivers + check which ones are busy
+    Driver.getActiveDriversForOwner(database, session.user.id).then(async (drvs) => {
+      setDrivers(drvs);
+      // Find drivers with active (non-terminal) jobs
+      const activeJobs = await database
+        .get<Job>('jobs')
+        .query(
+          Q.where('owner_id', session.user.id),
+          Q.where('status', Q.notIn(['delivered', 'rejected'])),
+        )
+        .fetch();
+      setBusyDriverIds(new Set(activeJobs.map(j => j.driverId)));
+    });
 
     return () => jobSub.unsubscribe();
   }, [order?.id, session?.user?.id]);
@@ -275,21 +287,28 @@ export default function OrderDetailScreen() {
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>Assign Driver</Text>
             <View style={styles.driverList}>
-              {drivers.map(d => (
-                <Pressable
-                  key={d.id}
-                  style={[
-                    styles.driverRow,
-                    selectedDriverId === d.id && styles.driverRowSelected,
-                  ]}
-                  onPress={() =>
-                    setSelectedDriverId(prev => (prev === d.id ? null : d.id))
-                  }
-                >
-                  <Text style={styles.driverName}>{d.name}</Text>
-                  <Text style={styles.driverPhone}>{d.phone}</Text>
-                </Pressable>
-              ))}
+              {drivers.map(d => {
+                const isBusy = busyDriverIds.has(d.userId);
+                return (
+                  <Pressable
+                    key={d.id}
+                    style={[
+                      styles.driverRow,
+                      selectedDriverId === d.id && styles.driverRowSelected,
+                      isBusy && styles.driverRowBusy,
+                    ]}
+                    onPress={() =>
+                      setSelectedDriverId(prev => (prev === d.id ? null : d.id))
+                    }
+                  >
+                    <View>
+                      <Text style={styles.driverName}>{d.name}</Text>
+                      {isBusy && <Text style={styles.busyLabel}>On a job</Text>}
+                    </View>
+                    <Text style={styles.driverPhone}>{d.phone}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
             {selectedDriverId && (
               <Button
@@ -429,6 +448,15 @@ const styles = StyleSheet.create({
   driverRowSelected: {
     borderColor: '#1A6B5A',
     backgroundColor: '#E8F0ED',
+  },
+  driverRowBusy: {
+    opacity: 0.6,
+  },
+  busyLabel: {
+    fontSize: 11,
+    color: '#C0392B',
+    fontWeight: '600',
+    marginTop: 2,
   },
   driverName: {
     fontSize: 15,

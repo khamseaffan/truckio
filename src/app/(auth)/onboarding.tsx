@@ -3,16 +3,21 @@ import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Activi
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase/client';
 import { useAuthStore } from '@/store/authStore';
+import { useSettingsStore } from '@/store/settingsStore';
+import { useTranslation, LANG_LIST, LANG_LABELS } from '@/i18n';
+import type { Lang } from '@/i18n';
 import { logger } from '@/shared/utils/logger';
 
 type RoleChoice = 'owner' | 'driver' | null;
-type Step = 'role' | 'owner_setup' | 'driver_setup';
+type Step = 'language' | 'role' | 'owner_setup' | 'driver_setup';
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const { user, setRole } = useAuthStore();
+  const { language, setLanguage } = useSettingsStore();
+  const { t } = useTranslation();
 
-  const [step, setStep] = useState<Step>('role');
+  const [step, setStep] = useState<Step>('language');
   const [roleChoice, setRoleChoice] = useState<RoleChoice>(null);
   const [loading, setLoading] = useState(false);
 
@@ -98,11 +103,46 @@ export default function OnboardingScreen() {
     }
   }
 
+  // ── Step 1: Language selection ──────────────────────────
+  if (step === 'language') {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Choose your language</Text>
+        <Text style={styles.subtitle}>Apni bhasha chunein</Text>
+
+        <View style={styles.langGrid}>
+          {LANG_LIST.map(lang => (
+            <Pressable
+              key={lang}
+              style={[styles.langChip, language === lang && styles.langChipActive]}
+              onPress={() => setLanguage(lang)}
+            >
+              <Text style={[styles.langChipText, language === lang && styles.langChipTextActive]}>
+                {LANG_LABELS[lang]}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Pressable
+          style={styles.button}
+          onPress={() => setStep('role')}
+        >
+          <Text style={styles.buttonText}>{t('continue')}</Text>
+        </Pressable>
+      </ScrollView>
+    );
+  }
+
+  // ── Step 2: Role selection ─────────────────────────────
   if (step === 'role') {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Welcome to Trukio</Text>
-        <Text style={styles.subtitle}>How will you use the app?</Text>
+        <Pressable onPress={() => setStep('language')} style={styles.back}>
+          <Text style={styles.backText}>{`← ${t('back')}`}</Text>
+        </Pressable>
+        <Text style={styles.title}>{t('welcomeTitle')}</Text>
+        <Text style={styles.subtitle}>{t('roleQuestion')}</Text>
 
         <Pressable
           style={[styles.roleCard, roleChoice === 'owner' && styles.roleCardActive]}
@@ -111,9 +151,9 @@ export default function OnboardingScreen() {
           <Text style={styles.roleEmoji}>🏢</Text>
           <View style={styles.roleTextBlock}>
             <Text style={[styles.roleTitle, roleChoice === 'owner' && styles.roleTitleActive]}>
-              Transport Owner
+              {t('roleOwner')}
             </Text>
-            <Text style={styles.roleDesc}>Manage orders, assign drivers, track deliveries</Text>
+            <Text style={styles.roleDesc}>{t('roleOwnerDesc')}</Text>
           </View>
         </Pressable>
 
@@ -124,9 +164,9 @@ export default function OnboardingScreen() {
           <Text style={styles.roleEmoji}>🚛</Text>
           <View style={styles.roleTextBlock}>
             <Text style={[styles.roleTitle, roleChoice === 'driver' && styles.roleTitleActive]}>
-              Driver
+              {t('roleDriver')}
             </Text>
-            <Text style={styles.roleDesc}>View assigned jobs and update delivery status</Text>
+            <Text style={styles.roleDesc}>{t('roleDriverDesc')}</Text>
           </View>
         </Pressable>
 
@@ -135,12 +175,13 @@ export default function OnboardingScreen() {
           onPress={handleRoleNext}
           disabled={!roleChoice}
         >
-          <Text style={styles.buttonText}>Continue</Text>
+          <Text style={styles.buttonText}>{t('continue')}</Text>
         </Pressable>
       </ScrollView>
     );
   }
 
+  // ── Step 3a: Owner setup (English-only — owner is business user) ──
   if (step === 'owner_setup') {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -204,16 +245,16 @@ export default function OnboardingScreen() {
     );
   }
 
-  // Driver setup
+  // ── Step 3b: Driver setup (translated) ─────────────────
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Pressable onPress={() => setStep('role')} style={styles.back}>
-        <Text style={styles.backText}>← Back</Text>
+        <Text style={styles.backText}>{`← ${t('back')}`}</Text>
       </Pressable>
-      <Text style={styles.title}>Join your fleet</Text>
-      <Text style={styles.subtitle}>Ask your operator for their 8-character invite code</Text>
+      <Text style={styles.title}>{t('joinFleet')}</Text>
+      <Text style={styles.subtitle}>{t('inviteCodeHint')}</Text>
 
-      <Text style={styles.label}>Your name</Text>
+      <Text style={styles.label}>{t('yourName')}</Text>
       <TextInput
         style={styles.input}
         placeholder="e.g. Ramesh Kumar"
@@ -223,7 +264,7 @@ export default function OnboardingScreen() {
         autoCapitalize="words"
       />
 
-      <Text style={styles.label}>Your phone</Text>
+      <Text style={styles.label}>{t('yourPhone')}</Text>
       <TextInput
         style={styles.input}
         placeholder="e.g. 9876543210"
@@ -233,7 +274,7 @@ export default function OnboardingScreen() {
         keyboardType="phone-pad"
       />
 
-      <Text style={styles.label}>Invite code</Text>
+      <Text style={styles.label}>{t('inviteCode')}</Text>
       <TextInput
         style={[styles.input, styles.codeInput]}
         placeholder="e.g. A1B2C3D4"
@@ -252,7 +293,7 @@ export default function OnboardingScreen() {
         {loading ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text style={styles.buttonText}>Join Fleet</Text>
+          <Text style={styles.buttonText}>{t('joinFleetBtn')}</Text>
         )}
       </Pressable>
     </ScrollView>
@@ -288,6 +329,37 @@ const styles = StyleSheet.create({
     color: '#8A8279',
     marginBottom: 40,
   },
+  // Language chips
+  langGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 16,
+  },
+  langChip: {
+    borderWidth: 1.5,
+    borderColor: '#E8E2D9',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    minWidth: '45%',
+    alignItems: 'center',
+  },
+  langChipActive: {
+    borderColor: '#1A6B5A',
+    backgroundColor: '#E8F0ED',
+  },
+  langChipText: {
+    fontSize: 15,
+    color: '#8A8279',
+    fontWeight: '500',
+  },
+  langChipTextActive: {
+    color: '#1A6B5A',
+    fontWeight: '700',
+  },
+  // Role cards
   roleCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -322,6 +394,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#8A8279',
   },
+  // Form fields
   label: {
     fontSize: 14,
     fontWeight: '600',

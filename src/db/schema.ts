@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 3,
+  version: 4,
   tables: [
     tableSchema({
       name: 'owners',
@@ -104,12 +104,26 @@ export const schema = appSchema({
       ],
     }),
     tableSchema({
+      name: 'vehicles',
+      columns: [
+        { name: 'owner_id', type: 'string', isIndexed: true },
+        { name: 'vehicle_number', type: 'string' }, // e.g. MH-12-AB-1234
+        { name: 'vehicle_type', type: 'string' }, // truck | mini_truck | trailer | tanker | other
+        { name: 'capacity_tons', type: 'number', isOptional: true },
+        { name: 'is_active', type: 'boolean' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
       name: 'invoices',
       columns: [
-        { name: 'owner_id', type: 'string' },
+        { name: 'owner_id', type: 'string', isIndexed: true },
         { name: 'order_id', type: 'string' },
         { name: 'job_id', type: 'string' },
+        { name: 'vehicle_id', type: 'string', isOptional: true },
         { name: 'invoice_number', type: 'string' },
+        { name: 'status', type: 'string' }, // draft | sent | paid | overdue | cancelled
         { name: 'customer_name', type: 'string' }, // denormalized
         { name: 'from_address', type: 'string' },
         { name: 'to_address', type: 'string' },
@@ -120,13 +134,21 @@ export const schema = appSchema({
         { name: 'loading_charge', type: 'number', isOptional: true },
         { name: 'unloading_charge', type: 'number', isOptional: true },
         { name: 'other_charges', type: 'number', isOptional: true },
+        { name: 'gst_rate', type: 'number', isOptional: true }, // e.g. 5, 12, 18
+        { name: 'cgst_amount', type: 'number', isOptional: true },
+        { name: 'sgst_amount', type: 'number', isOptional: true },
+        { name: 'igst_amount', type: 'number', isOptional: true },
         { name: 'total_amount', type: 'number' },
+        { name: 'advance_received', type: 'number', isOptional: true },
         { name: 'payment_status', type: 'string' }, // pending | paid | overdue
+        { name: 'payment_mode', type: 'string', isOptional: true }, // cash | upi | bank_transfer
         { name: 'payment_due_date', type: 'number', isOptional: true },
-        { name: 'vehicle_number', type: 'string', isOptional: true },
+        { name: 'vehicle_number', type: 'string', isOptional: true }, // denormalized from vehicle
+        { name: 'eway_bill_number', type: 'string', isOptional: true },
         { name: 'pdf_path', type: 'string', isOptional: true },
         { name: 'template_id', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
       ],
     }),
     tableSchema({

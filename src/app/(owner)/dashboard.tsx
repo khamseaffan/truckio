@@ -24,12 +24,16 @@ export default function OwnerDashboard() {
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
 
+    // Orders scheduled for today (not created today)
     const jobsSub = database
-      .get<Job>('jobs')
+      .get<Order>('orders')
       .query(
         Q.where('owner_id', uid),
-        Q.where('created_at', Q.gte(startOfDay.getTime())),
+        Q.where('scheduled_date', Q.gte(startOfDay.getTime())),
+        Q.where('scheduled_date', Q.lte(endOfDay.getTime())),
       )
       .observeCount()
       .subscribe(setTodayJobs);

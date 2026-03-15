@@ -7,6 +7,7 @@ import Order from './models/Order';
 import Job from './models/Job';
 import Driver from './models/Driver';
 import TeamMembership from './models/TeamMembership';
+import Vehicle from './models/Vehicle';
 import Invoice from './models/Invoice';
 import Notification from './models/Notification';
 
@@ -21,5 +22,5 @@ const adapter = new SQLiteAdapter({
 
 export const database = new Database({
   adapter,
-  modelClasses: [Order, Job, Driver, TeamMembership, Invoice, Notification],
+  modelClasses: [Order, Job, Driver, TeamMembership, Vehicle, Invoice, Notification],
 });

@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { useAuthStore } from '@/store/authStore';
+import { useSettingsStore } from '@/store/settingsStore';
 import { supabase } from '@/services/supabase/client';
 import { fetchUserRole } from '@/services/supabase/auth';
 import { logger } from '@/shared/utils/logger';
@@ -91,6 +92,11 @@ function useProtectedRoute() {
 
 export default function RootLayout() {
   useProtectedRoute();
+
+  // Load persisted language setting on mount
+  useEffect(() => {
+    useSettingsStore.getState().loadSettings();
+  }, []);
 
   return (
     <DatabaseProvider database={database}>
