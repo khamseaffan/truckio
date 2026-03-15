@@ -1,6 +1,7 @@
 import { Model, Q } from '@nozbe/watermelondb';
 import { field, date, text, readonly } from '@nozbe/watermelondb/decorators';
 import type { Database } from '@nozbe/watermelondb';
+import { randomUUID } from 'expo-crypto';
 import type Job from './Job';
 
 interface CreateOrderData {
@@ -8,7 +9,11 @@ interface CreateOrderData {
   customerName: string;
   customerPhone?: string;
   pickupAddress: string;
+  pickupLat?: number;
+  pickupLng?: number;
   dropAddress: string;
+  dropLat?: number;
+  dropLng?: number;
   materialType: string;
   quantityValue?: number;
   quantityUnit?: string;
@@ -40,11 +45,16 @@ export default class Order extends Model {
   static async createNew(db: Database, data: CreateOrderData): Promise<Order> {
     return db.write(async () => {
       return db.get<Order>('orders').create(order => {
+        order._raw.id = randomUUID();
         order.ownerId = data.ownerId;
         order.customerName = data.customerName;
         order.customerPhone = data.customerPhone ?? '';
         order.pickupAddress = data.pickupAddress;
+        order.pickupLat = data.pickupLat ?? 0;
+        order.pickupLng = data.pickupLng ?? 0;
         order.dropAddress = data.dropAddress;
+        order.dropLat = data.dropLat ?? 0;
+        order.dropLng = data.dropLng ?? 0;
         order.materialType = data.materialType;
         order.quantityValue = data.quantityValue ?? 0;
         order.quantityUnit = data.quantityUnit ?? '';

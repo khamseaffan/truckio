@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, AppState } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
@@ -11,6 +11,7 @@ import { database } from '@/db';
 import { syncManager } from '@/sync/SyncManager';
 import SyncBanner from '@/shared/components/SyncBanner';
 import OfflineBanner from '@/shared/components/OfflineBanner';
+import ToastContainer from '@/shared/components/ToastContainer';
 
 /** Redirect based on auth state and role */
 function useProtectedRoute() {
@@ -59,6 +60,15 @@ function useProtectedRoute() {
     return () => syncManager.stopAutoSync();
   }, [isAuthenticated, role]);
 
+  // Re-sync when app comes back to foreground
+  useEffect(() => {
+    if (!isAuthenticated || !role) return;
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') syncManager.sync(database, supabase);
+    });
+    return () => sub.remove();
+  }, [isAuthenticated, role]);
+
   // Handle navigation based on auth state
   useEffect(() => {
     if (isLoading) return;
@@ -88,6 +98,7 @@ export default function RootLayout() {
       <View style={{ flex: 1 }}>
         <OfflineBanner />
         <SyncBanner />
+        <ToastContainer />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(owner)" />

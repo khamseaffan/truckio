@@ -1,23 +1,39 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase/client';
 import { useAuthStore } from '@/store/authStore';
 import { logger } from '@/shared/utils/logger';
 
-/** First-time owner setup — business name, invoice numbering preference */
+type RoleChoice = 'owner' | 'driver' | null;
+type Step = 'role' | 'owner_setup' | 'driver_setup';
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const { user, setRole } = useAuthStore();
+
+  const [step, setStep] = useState<Step>('role');
+  const [roleChoice, setRoleChoice] = useState<RoleChoice>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Owner fields
   const [businessName, setBusinessName] = useState('');
   const [invoiceAuto, setInvoiceAuto] = useState(true);
   const [invoicePrefix, setInvoicePrefix] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleComplete = async () => {
+  // Driver fields
+  const [driverName, setDriverName] = useState('');
+  const [driverPhone, setDriverPhone] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+
+  function handleRoleNext() {
+    if (!roleChoice) return;
+    setStep(roleChoice === 'owner' ? 'owner_setup' : 'driver_setup');
+  }
+
+  async function handleOwnerComplete() {
     if (!businessName.trim() || !user) return;
     setLoading(true);
-
     try {
       const { error } = await supabase.from('owners').insert({
         user_id: user.id,
@@ -29,72 +45,215 @@ export default function OnboardingScreen() {
         plan_tier: 'starter',
         plan_status: 'active',
       });
-
       if (error) throw error;
-
       setRole('owner');
       logger.info('Onboarding complete — owner record created');
       router.replace('/(owner)/dashboard');
     } catch (err: any) {
-      logger.error('Onboarding failed:', err);
+      logger.error('Owner onboarding failed:', err);
       Alert.alert('Error', err.message || 'Failed to save. Try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Set up your business</Text>
-      <Text style={styles.subtitle}>This takes 30 seconds</Text>
+  async function handleDriverComplete() {
+    if (!driverName.trim() || !inviteCode.trim() || !user) return;
+    setLoading(true);
+    try {
+      // Look up owner by matching first 8 chars of their user_id (the invite code)
+      const code = inviteCode.trim().toLowerCase();
+      const { data: owners, error: ownerErr } = await supabase
+        .from('owners')
+        .select('user_id')
+        .ilike('user_id', `${code}%`)
+        .limit(1);
 
-      <Text style={styles.label}>Business name</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g. Ram Transport"
-        placeholderTextColor="#B5AFA6"
-        value={businessName}
-        onChangeText={setBusinessName}
-      />
+      if (ownerErr) throw ownerErr;
+      if (!owners || owners.length === 0) {
+        Alert.alert('Invalid Code', 'No owner found with that invite code. Ask your operator for the code from the Drivers screen.');
+        setLoading(false);
+        return;
+      }
 
-      <Text style={styles.label}>Invoice numbering</Text>
-      <View style={styles.toggleRow}>
+      const ownerUserId = owners[0].user_id;
+
+      const { error: driverErr } = await supabase.from('drivers').insert({
+        user_id: user.id,
+        owner_id: ownerUserId,
+        name: driverName.trim(),
+        phone: driverPhone.trim() || user.phone || '',
+        is_active: true,
+      });
+      if (driverErr) throw driverErr;
+
+      setRole('driver');
+      logger.info('Onboarding complete — driver record created');
+      router.replace('/(driver)/job');
+    } catch (err: any) {
+      logger.error('Driver onboarding failed:', err);
+      Alert.alert('Error', err.message || 'Failed to join fleet. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (step === 'role') {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Welcome to Trukio</Text>
+        <Text style={styles.subtitle}>How will you use the app?</Text>
+
         <Pressable
-          style={[styles.toggle, invoiceAuto && styles.toggleActive]}
-          onPress={() => setInvoiceAuto(true)}
+          style={[styles.roleCard, roleChoice === 'owner' && styles.roleCardActive]}
+          onPress={() => setRoleChoice('owner')}
         >
-          <Text style={[styles.toggleText, invoiceAuto && styles.toggleTextActive]}>
-            Auto (INV-2026-001)
-          </Text>
+          <Text style={styles.roleEmoji}>🏢</Text>
+          <View style={styles.roleTextBlock}>
+            <Text style={[styles.roleTitle, roleChoice === 'owner' && styles.roleTitleActive]}>
+              Transport Owner
+            </Text>
+            <Text style={styles.roleDesc}>Manage orders, assign drivers, track deliveries</Text>
+          </View>
         </Pressable>
-        <Pressable
-          style={[styles.toggle, !invoiceAuto && styles.toggleActive]}
-          onPress={() => setInvoiceAuto(false)}
-        >
-          <Text style={[styles.toggleText, !invoiceAuto && styles.toggleTextActive]}>
-            Custom prefix
-          </Text>
-        </Pressable>
-      </View>
 
-      {!invoiceAuto && (
+        <Pressable
+          style={[styles.roleCard, roleChoice === 'driver' && styles.roleCardActive]}
+          onPress={() => setRoleChoice('driver')}
+        >
+          <Text style={styles.roleEmoji}>🚛</Text>
+          <View style={styles.roleTextBlock}>
+            <Text style={[styles.roleTitle, roleChoice === 'driver' && styles.roleTitleActive]}>
+              Driver
+            </Text>
+            <Text style={styles.roleDesc}>View assigned jobs and update delivery status</Text>
+          </View>
+        </Pressable>
+
+        <Pressable
+          style={[styles.button, !roleChoice && styles.buttonDisabled]}
+          onPress={handleRoleNext}
+          disabled={!roleChoice}
+        >
+          <Text style={styles.buttonText}>Continue</Text>
+        </Pressable>
+      </ScrollView>
+    );
+  }
+
+  if (step === 'owner_setup') {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Pressable onPress={() => setStep('role')} style={styles.back}>
+          <Text style={styles.backText}>← Back</Text>
+        </Pressable>
+        <Text style={styles.title}>Set up your business</Text>
+        <Text style={styles.subtitle}>This takes 30 seconds</Text>
+
+        <Text style={styles.label}>Business name</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g. RAM/2026/"
+          placeholder="e.g. Ram Transport"
           placeholderTextColor="#B5AFA6"
-          value={invoicePrefix}
-          onChangeText={setInvoicePrefix}
+          value={businessName}
+          onChangeText={setBusinessName}
         />
-      )}
+
+        <Text style={styles.label}>Invoice numbering</Text>
+        <View style={styles.toggleRow}>
+          <Pressable
+            style={[styles.toggle, invoiceAuto && styles.toggleActive]}
+            onPress={() => setInvoiceAuto(true)}
+          >
+            <Text style={[styles.toggleText, invoiceAuto && styles.toggleTextActive]}>
+              Auto (INV-2026-001)
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.toggle, !invoiceAuto && styles.toggleActive]}
+            onPress={() => setInvoiceAuto(false)}
+          >
+            <Text style={[styles.toggleText, !invoiceAuto && styles.toggleTextActive]}>
+              Custom prefix
+            </Text>
+          </Pressable>
+        </View>
+
+        {!invoiceAuto && (
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. RAM/2026/"
+            placeholderTextColor="#B5AFA6"
+            value={invoicePrefix}
+            onChangeText={setInvoicePrefix}
+          />
+        )}
+
+        <Pressable
+          style={[styles.button, (!businessName.trim() || loading) && styles.buttonDisabled]}
+          onPress={handleOwnerComplete}
+          disabled={!businessName.trim() || loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Get Started</Text>
+          )}
+        </Pressable>
+      </ScrollView>
+    );
+  }
+
+  // Driver setup
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Pressable onPress={() => setStep('role')} style={styles.back}>
+        <Text style={styles.backText}>← Back</Text>
+      </Pressable>
+      <Text style={styles.title}>Join your fleet</Text>
+      <Text style={styles.subtitle}>Ask your operator for their 8-character invite code</Text>
+
+      <Text style={styles.label}>Your name</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="e.g. Ramesh Kumar"
+        placeholderTextColor="#B5AFA6"
+        value={driverName}
+        onChangeText={setDriverName}
+        autoCapitalize="words"
+      />
+
+      <Text style={styles.label}>Your phone</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="e.g. 9876543210"
+        placeholderTextColor="#B5AFA6"
+        value={driverPhone}
+        onChangeText={setDriverPhone}
+        keyboardType="phone-pad"
+      />
+
+      <Text style={styles.label}>Invite code</Text>
+      <TextInput
+        style={[styles.input, styles.codeInput]}
+        placeholder="e.g. A1B2C3D4"
+        placeholderTextColor="#B5AFA6"
+        value={inviteCode}
+        onChangeText={setInviteCode}
+        autoCapitalize="characters"
+        autoCorrect={false}
+      />
 
       <Pressable
-        style={[styles.button, (!businessName.trim() || loading) && styles.buttonDisabled]}
-        onPress={handleComplete}
-        disabled={!businessName.trim() || loading}
+        style={[styles.button, (!driverName.trim() || !inviteCode.trim() || loading) && styles.buttonDisabled]}
+        onPress={handleDriverComplete}
+        disabled={!driverName.trim() || !inviteCode.trim() || loading}
       >
-        <Text style={styles.buttonText}>
-          {loading ? 'Setting up...' : 'Get Started'}
-        </Text>
+        {loading ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.buttonText}>Join Fleet</Text>
+        )}
       </Pressable>
     </ScrollView>
   );
@@ -107,8 +266,16 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 32,
-    paddingTop: 100,
+    paddingTop: 80,
     paddingBottom: 40,
+  },
+  back: {
+    marginBottom: 24,
+  },
+  backText: {
+    fontSize: 15,
+    color: '#1A6B5A',
+    fontWeight: '600',
   },
   title: {
     fontSize: 28,
@@ -120,6 +287,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#8A8279',
     marginBottom: 40,
+  },
+  roleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#E8E2D9',
+    borderRadius: 16,
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 12,
+    gap: 16,
+  },
+  roleCardActive: {
+    borderColor: '#1A6B5A',
+    backgroundColor: '#E8F0ED',
+  },
+  roleEmoji: {
+    fontSize: 32,
+  },
+  roleTextBlock: {
+    flex: 1,
+  },
+  roleTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#2D2A26',
+    marginBottom: 4,
+  },
+  roleTitleActive: {
+    color: '#1A6B5A',
+  },
+  roleDesc: {
+    fontSize: 13,
+    color: '#8A8279',
   },
   label: {
     fontSize: 14,
@@ -137,6 +338,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: '#2D2A26',
+  },
+  codeInput: {
+    letterSpacing: 2,
+    fontWeight: '700',
   },
   toggleRow: {
     flexDirection: 'row',

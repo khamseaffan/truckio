@@ -4,15 +4,18 @@ import { useSyncStore } from '@/store/syncStore';
 export default function SyncBanner() {
   const { status, pendingCount } = useSyncStore();
 
-  if (status === 'idle' || status === 'syncing') return null;
+  if (pendingCount === 0 && (status === 'idle' || status === 'syncing')) return null;
+
+  const message =
+    status === 'error'
+      ? `Sync failed — ${pendingCount} changes pending`
+      : status === 'offline'
+      ? `Offline — ${pendingCount} changes will sync when connected`
+      : `${pendingCount} changes not yet synced`;
 
   return (
     <View style={[styles.banner, status === 'error' ? styles.error : styles.offline]}>
-      <Text style={styles.text}>
-        {status === 'error'
-          ? `Sync failed — ${pendingCount} changes pending`
-          : `Offline — ${pendingCount} changes will sync when connected`}
-      </Text>
+      <Text style={styles.text}>{message}</Text>
     </View>
   );
 }

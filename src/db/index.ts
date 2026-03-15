@@ -1,7 +1,7 @@
 import { Database } from '@nozbe/watermelondb';
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
 import { schema } from './schema';
-// import migrations from './migrations'; // Enable when first migration exists
+import { migrations } from './migrations';
 
 import Order from './models/Order';
 import Job from './models/Job';
@@ -12,7 +12,7 @@ import Notification from './models/Notification';
 
 const adapter = new SQLiteAdapter({
   schema,
-  // migrations,
+  migrations,
   jsi: false, // false = legacy bridge, compatible with Expo Go and development builds
   onSetUpError: (error) => {
     console.error('[DB] Setup error:', error);

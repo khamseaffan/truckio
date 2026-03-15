@@ -93,6 +93,13 @@ export default function OrderDetailScreen() {
 
     setAssigning(true);
     try {
+      // Guard: prevent duplicate job if one was already created (e.g. double-tap)
+      const existingJob = await order.getJob();
+      if (existingJob) {
+        setAssigning(false);
+        return;
+      }
+
       const newJob = await Job.createForOrder(database, {
         orderId: order.id,
         ownerId: session.user.id,

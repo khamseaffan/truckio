@@ -83,10 +83,10 @@ class SyncManager {
   }
 
   private async pullForOwner(db: Database, supabase: SupabaseClient, ownerId: string) {
-    const [ordersRes, jobsRes, membershipsRes] = await Promise.all([
+    const [ordersRes, jobsRes, driversRes] = await Promise.all([
       supabase.from('orders').select('*').eq('owner_id', ownerId),
       supabase.from('jobs').select('*').eq('owner_id', ownerId),
-      supabase.from('team_memberships').select('*').eq('owner_id', ownerId),
+      supabase.from('drivers').select('*').eq('owner_id', ownerId),
     ]);
 
     if (ordersRes.data) {
@@ -101,7 +101,7 @@ class SyncManager {
         r.quantityUnit = d.quantity_unit ?? '';
         r.status = d.status ?? 'pending';
         r.notes = d.notes ?? '';
-        r.scheduledDate = d.scheduled_date ?? 0;
+        r.scheduledDate = d.scheduled_date ? new Date(d.scheduled_date).getTime() : 0;
       });
     }
 
@@ -112,35 +112,20 @@ class SyncManager {
         r.driverId = d.driver_id;
         r.driverName = d.driver_name ?? '';
         r.status = d.status ?? 'assigned';
-        r.pickupTime = d.pickup_time ?? 0;
-        r.deliveryTime = d.delivery_time ?? 0;
+        r.pickupTime = d.pickup_time ? new Date(d.pickup_time).getTime() : 0;
+        r.deliveryTime = d.delivery_time ? new Date(d.delivery_time).getTime() : 0;
         r.shareToken = d.share_token ?? '';
       });
     }
 
-    if (membershipsRes.data) {
-      await mergeInto(db, 'team_memberships', membershipsRes.data, (r, d) => {
-        r.ownerId = d.owner_id;
-        r.driverId = d.driver_id;
-        r.membershipType = d.membership_type ?? 'permanent';
+    if (driversRes.data) {
+      await mergeInto(db, 'drivers', driversRes.data, (r, d) => {
+        r.userId = d.user_id ?? '';
+        r.ownerId = d.owner_id ?? '';
+        r.name = d.name ?? '';
+        r.phone = d.phone ?? '';
         r.isActive = d.is_active ?? true;
-        r.startDate = d.start_date ?? Date.now();
-        r.endDate = d.end_date ?? 0;
       });
-
-      // Also pull the driver records for those memberships
-      const driverIds = membershipsRes.data.map((m: any) => m.driver_id).filter(Boolean);
-      if (driverIds.length > 0) {
-        const driversRes = await supabase.from('drivers').select('*').in('id', driverIds);
-        if (driversRes.data) {
-          await mergeInto(db, 'drivers', driversRes.data, (r, d) => {
-            r.userId = d.user_id ?? '';
-            r.name = d.name ?? '';
-            r.phone = d.phone ?? '';
-            r.isActive = d.is_active ?? true;
-          });
-        }
-      }
     }
   }
 
@@ -158,8 +143,8 @@ class SyncManager {
         r.driverId = d.driver_id;
         r.driverName = d.driver_name ?? '';
         r.status = d.status ?? 'assigned';
-        r.pickupTime = d.pickup_time ?? 0;
-        r.deliveryTime = d.delivery_time ?? 0;
+        r.pickupTime = d.pickup_time ? new Date(d.pickup_time).getTime() : 0;
+        r.deliveryTime = d.delivery_time ? new Date(d.delivery_time).getTime() : 0;
         r.shareToken = d.share_token ?? '';
       });
 

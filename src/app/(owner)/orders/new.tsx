@@ -12,6 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Input from '@/shared/components/ui/Input';
 import Button from '@/shared/components/ui/Button';
+import DateField from '@/shared/components/ui/DateField';
+import AddressInput from '@/shared/components/ui/AddressInput';
 import { database } from '@/db';
 import Order from '@/db/models/Order';
 import { useAuthStore } from '@/store/authStore';
@@ -28,7 +30,6 @@ interface FormData {
   materialType: string;
   quantityValue: string;
   quantityUnit: string;
-  scheduledDate: string;
   notes: string;
 }
 
@@ -54,6 +55,7 @@ export default function NewOrderScreen() {
   const { showToast } = useUiStore();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+
   const [form, setForm] = useState<FormData>({
     customerName: '',
     customerPhone: '',
@@ -62,9 +64,17 @@ export default function NewOrderScreen() {
     materialType: '',
     quantityValue: '',
     quantityUnit: '',
-    scheduledDate: '',
     notes: '',
   });
+
+  // Coordinates from Places API
+  const [pickupLat, setPickupLat] = useState(0);
+  const [pickupLng, setPickupLng] = useState(0);
+  const [dropLat, setDropLat] = useState(0);
+  const [dropLng, setDropLng] = useState(0);
+
+  // Date from native picker
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
 
   function set(key: keyof FormData) {
     return (value: string) => setForm(f => ({ ...f, [key]: value }));
@@ -87,25 +97,20 @@ export default function NewOrderScreen() {
     try {
       const quantityValue = form.quantityValue ? parseFloat(form.quantityValue) : undefined;
 
-      // Parse date string DD/MM/YYYY → timestamp
-      let scheduledDate: number | undefined;
-      if (form.scheduledDate.trim()) {
-        const [day, month, year] = form.scheduledDate.split('/').map(Number);
-        if (day && month && year) {
-          scheduledDate = new Date(year, month - 1, day).getTime();
-        }
-      }
-
       const order = await Order.createNew(database, {
         ownerId: session.user.id,
         customerName: form.customerName.trim(),
         customerPhone: form.customerPhone.trim() || undefined,
         pickupAddress: form.pickupAddress.trim(),
+        pickupLat: pickupLat || undefined,
+        pickupLng: pickupLng || undefined,
         dropAddress: form.dropAddress.trim(),
+        dropLat: dropLat || undefined,
+        dropLng: dropLng || undefined,
         materialType: form.materialType.trim(),
         quantityValue,
         quantityUnit: form.quantityUnit.trim() || undefined,
-        scheduledDate,
+        scheduledDate: scheduledDate?.getTime(),
         notes: form.notes.trim() || undefined,
       });
 
@@ -119,13 +124,17 @@ export default function NewOrderScreen() {
           customer_name: order.customerName,
           customer_phone: order.customerPhone || null,
           pickup_address: order.pickupAddress,
+          pickup_lat: order.pickupLat || null,
+          pickup_lng: order.pickupLng || null,
           drop_address: order.dropAddress,
+          drop_lat: order.dropLat || null,
+          drop_lng: order.dropLng || null,
           material_type: order.materialType,
           quantity_value: order.quantityValue || null,
           quantity_unit: order.quantityUnit || null,
           status: order.status,
           notes: order.notes || null,
-          scheduled_date: order.scheduledDate || null,
+          scheduled_date: scheduledDate ? scheduledDate.toISOString() : null,
         },
       });
 
@@ -173,25 +182,29 @@ export default function NewOrderScreen() {
           />
 
           <Text style={styles.section}>Route</Text>
-          <Input
+          <AddressInput
             label="Pickup Address *"
-            placeholder="e.g. 12 MG Road, Pune"
             value={form.pickupAddress}
-            onChangeText={set('pickupAddress')}
             error={errors.pickupAddress}
-            multiline
-            numberOfLines={2}
-            style={styles.multilineInput}
+            placeholder="Search pickup location..."
+            onSelect={(address, lat, lng) => {
+              set('pickupAddress')(address);
+              setPickupLat(lat);
+              setPickupLng(lng);
+              setErrors(e => ({ ...e, pickupAddress: undefined }));
+            }}
           />
-          <Input
+          <AddressInput
             label="Drop Address *"
-            placeholder="e.g. MIDC, Aurangabad"
             value={form.dropAddress}
-            onChangeText={set('dropAddress')}
             error={errors.dropAddress}
-            multiline
-            numberOfLines={2}
-            style={styles.multilineInput}
+            placeholder="Search drop location..."
+            onSelect={(address, lat, lng) => {
+              set('dropAddress')(address);
+              setDropLat(lat);
+              setDropLng(lng);
+              setErrors(e => ({ ...e, dropAddress: undefined }));
+            }}
           />
 
           <Text style={styles.section}>Material</Text>
@@ -225,12 +238,11 @@ export default function NewOrderScreen() {
           </View>
 
           <Text style={styles.section}>Schedule</Text>
-          <Input
+          <DateField
             label="Scheduled Date"
-            placeholder="DD/MM/YYYY"
-            value={form.scheduledDate}
-            onChangeText={set('scheduledDate')}
-            keyboardType="numbers-and-punctuation"
+            value={scheduledDate}
+            onChange={setScheduledDate}
+            placeholder="Tap to pick a date"
           />
 
           <Text style={styles.section}>Notes</Text>

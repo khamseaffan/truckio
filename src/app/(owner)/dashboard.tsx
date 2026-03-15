@@ -1,12 +1,57 @@
+import { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Q } from '@nozbe/watermelondb';
 import { useAuthStore } from '@/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
+import { database } from '@/db';
+import type Order from '@/db/models/Order';
+import type Job from '@/db/models/Job';
+import type Driver from '@/db/models/Driver';
 
 export default function OwnerDashboard() {
   const { user } = useAuthStore();
   const router = useRouter();
+
+  const [todayJobs, setTodayJobs] = useState(0);
+  const [activeDrivers, setActiveDrivers] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const uid = user.id;
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const jobsSub = database
+      .get<Job>('jobs')
+      .query(
+        Q.where('owner_id', uid),
+        Q.where('created_at', Q.gte(startOfDay.getTime())),
+      )
+      .observeCount()
+      .subscribe(setTodayJobs);
+
+    const driversSub = database
+      .get<Driver>('drivers')
+      .query(Q.where('owner_id', uid), Q.where('is_active', true))
+      .observeCount()
+      .subscribe(setActiveDrivers);
+
+    const ordersSub = database
+      .get<Order>('orders')
+      .query(Q.where('owner_id', uid))
+      .observeCount()
+      .subscribe(setTotalOrders);
+
+    return () => {
+      jobsSub.unsubscribe();
+      driversSub.unsubscribe();
+      ordersSub.unsubscribe();
+    };
+  }, [user?.id]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -19,7 +64,7 @@ export default function OwnerDashboard() {
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statNumber}>{todayJobs}</Text>
           <Text style={styles.statLabel}>Today's jobs</Text>
         </View>
         <View style={styles.statCard}>
@@ -30,18 +75,20 @@ export default function OwnerDashboard() {
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statNumber}>{activeDrivers}</Text>
           <Text style={styles.statLabel}>Active drivers</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statNumber}>{totalOrders}</Text>
           <Text style={styles.statLabel}>Total orders</Text>
         </View>
       </View>
 
       <Text style={styles.sectionTitle}>Recent Orders</Text>
       <View style={styles.emptyState}>
-        <Text style={styles.emptyText}>No orders yet. Create your first order!</Text>
+        <Text style={styles.emptyText}>
+          {totalOrders === 0 ? 'No orders yet. Create your first order!' : 'Go to Orders tab to view all orders.'}
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -62,11 +109,6 @@ const styles = StyleSheet.create({
   },
   profileButton: {
     padding: 4,
-  },
-  greeting: {
-    fontSize: 14,
-    color: '#8A8279',
-    marginBottom: 4,
   },
   title: {
     fontSize: 28,
