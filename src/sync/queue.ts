@@ -1,5 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '@/shared/utils/logger';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+const STORAGE_KEY = 'trukio_sync_queue';
 
 interface QueuedWrite {
   id: string;
@@ -11,15 +14,30 @@ interface QueuedWrite {
   timestamp: number;
 }
 
-const queue: QueuedWrite[] = [];
+async function loadQueue(): Promise<QueuedWrite[]> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as QueuedWrite[]) : [];
+  } catch {
+    return [];
+  }
+}
 
-export function enqueue(write: {
+async function saveQueue(queue: QueuedWrite[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+  } catch (err) {
+    logger.error('Failed to persist sync queue:', err);
+  }
+}
+
+export async function enqueue(write: {
   table: string;
   recordId: string;
   operation: 'upsert' | 'delete';
   data?: Record<string, unknown>;
-}) {
-  // Deduplicate: if same table+recordId already queued, update in place
+}): Promise<void> {
+  const queue = await loadQueue();
   const existing = queue.find(q => q.table === write.table && q.recordId === write.recordId);
   if (existing) {
     existing.data = write.data;
@@ -33,20 +51,23 @@ export function enqueue(write: {
       timestamp: Date.now(),
     });
   }
+  await saveQueue(queue);
   logger.debug(`Queued ${write.operation} on ${write.table}:${write.recordId}`);
 }
 
-export function getPendingCount() {
+export async function getPendingCount(): Promise<number> {
+  const queue = await loadQueue();
   return queue.length;
 }
 
 export async function flush(supabase: SupabaseClient): Promise<void> {
+  const queue = await loadQueue();
   if (queue.length === 0) return;
 
   logger.info(`Flushing ${queue.length} queued writes to Supabase`);
-  const pending = [...queue];
+  const flushedIds: string[] = [];
 
-  for (const write of pending) {
+  for (const write of queue) {
     try {
       if (write.operation === 'delete') {
         const { error } = await supabase.from(write.table).delete().eq('id', write.recordId);
@@ -55,13 +76,15 @@ export async function flush(supabase: SupabaseClient): Promise<void> {
         const { error } = await supabase.from(write.table).upsert(write.data);
         if (error) throw error;
       }
-      // Remove from queue on success
-      const idx = queue.findIndex(q => q.id === write.id);
-      if (idx >= 0) queue.splice(idx, 1);
+      flushedIds.push(write.id);
       logger.debug(`Flushed ${write.operation} on ${write.table}:${write.recordId}`);
     } catch (err) {
       write.retryCount += 1;
       logger.error(`Flush failed for ${write.table}:${write.recordId} (retry ${write.retryCount}):`, err);
     }
   }
+
+  // Persist only the items that failed
+  const remaining = queue.filter(q => !flushedIds.includes(q.id));
+  await saveQueue(remaining);
 }

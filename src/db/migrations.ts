@@ -11,5 +11,11 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 3,
+      // Index additions are handled automatically by WatermelonDB on schema version bump.
+      // No addColumns steps needed — this migration just triggers index recreation.
+      steps: [],
+    },
   ],
 });

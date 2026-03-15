@@ -56,33 +56,38 @@ export default function OwnerDashboard() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.push('/(owner)/profile')} style={styles.profileButton}>
+        <Text style={styles.title}>Dashboard</Text>
+        <Pressable
+          onPress={() => router.push('/(owner)/profile')}
+          style={styles.profileButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Ionicons name="person-circle-outline" size={32} color="#1A6B5A" />
         </Pressable>
-        <Text style={styles.title}>Dashboard</Text>
       </View>
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{todayJobs}</Text>
-          <Text style={styles.statLabel}>Today's jobs</Text>
+          <Text style={styles.statLabel}>Today's Jobs</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>0</Text>
-          <Text style={styles.statLabel}>Pending payments</Text>
+          <Text style={styles.statNumber}>{activeDrivers}</Text>
+          <Text style={styles.statLabel}>Active Drivers</Text>
         </View>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{activeDrivers}</Text>
-          <Text style={styles.statLabel}>Active drivers</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{totalOrders}</Text>
-          <Text style={styles.statLabel}>Total orders</Text>
-        </View>
+      <View style={styles.statCardFull}>
+        <Text style={styles.statNumber}>{totalOrders}</Text>
+        <Text style={styles.statLabel}>Total Orders</Text>
       </View>
+
+      <Pressable
+        style={({ pressed }) => [styles.newOrderBtn, pressed && { opacity: 0.8 }]}
+        onPress={() => router.push('/(owner)/orders/new')}
+      >
+        <Text style={styles.newOrderBtnText}>+ New Order</Text>
+      </Pressable>
 
       <Text style={styles.sectionTitle}>Recent Orders</Text>
       <View style={styles.emptyState}>
@@ -156,5 +161,26 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: '#B5AFA6',
+  },
+  statCardFull: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8E2D9',
+    padding: 20,
+    marginBottom: 12,
+  },
+  newOrderBtn: {
+    backgroundColor: '#1A6B5A',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  newOrderBtnText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
 });

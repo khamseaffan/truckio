@@ -21,7 +21,9 @@ async function mergeInto(
     let existing: any = null;
     try {
       existing = await collection.find(data.id as string);
-    } catch {}
+    } catch {
+      // WatermelonDB throws when record is not found — treat as "needs create"
+    }
 
     if (existing) {
       ops.push(existing.prepareUpdate((r: any) => mapFn(r, data)));
@@ -71,12 +73,12 @@ class SyncManager {
 
       useSyncStore.getState().setStatus('idle');
       useSyncStore.getState().setLastSynced(new Date());
-      useSyncStore.getState().setPendingCount(getPendingCount());
+      useSyncStore.getState().setPendingCount(await getPendingCount());
       logger.info('Sync complete');
     } catch (err) {
       logger.error('Sync failed:', err);
       useSyncStore.getState().setStatus('error');
-      useSyncStore.getState().setPendingCount(getPendingCount());
+      useSyncStore.getState().setPendingCount(await getPendingCount());
     } finally {
       this.isRunning = false;
     }
@@ -134,7 +136,7 @@ class SyncManager {
       .from('jobs')
       .select('*')
       .eq('driver_id', driverId)
-      .not('status', 'in', '("delivered","rejected")');
+      .not('status', 'in', '(delivered,rejected)');
 
     if (jobs) {
       await mergeInto(db, 'jobs', jobs, (r, d) => {
@@ -164,7 +166,7 @@ class SyncManager {
             r.quantityUnit = d.quantity_unit ?? '';
             r.status = d.status ?? 'pending';
             r.notes = d.notes ?? '';
-            r.scheduledDate = d.scheduled_date ?? 0;
+            r.scheduledDate = d.scheduled_date ? new Date(d.scheduled_date).getTime() : 0;
           });
         }
       }
@@ -182,7 +184,7 @@ class SyncManager {
         this.sync(db, supabase);
       } else {
         useSyncStore.getState().setStatus('offline');
-        useSyncStore.getState().setPendingCount(getPendingCount());
+        getPendingCount().then(c => useSyncStore.getState().setPendingCount(c));
       }
     });
 

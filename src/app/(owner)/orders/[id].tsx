@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Q } from '@nozbe/watermelondb';
+import { randomUUID } from 'expo-crypto';
 import { database } from '@/db';
 import Order from '@/db/models/Order';
 import Job from '@/db/models/Job';
@@ -100,26 +101,33 @@ export default function OrderDetailScreen() {
         return;
       }
 
-      const newJob = await Job.createForOrder(database, {
-        orderId: order.id,
-        ownerId: session.user.id,
-        driverId: driver.userId, // driver's auth user ID
-        driverName: driver.name,
+      // Atomic: create job + update order status in a single write transaction
+      const jobId = randomUUID();
+      await database.write(async () => {
+        const preparedJob = Job.prepareForOrder(database, {
+          id: jobId,
+          orderId: order.id,
+          ownerId: session.user.id,
+          driverId: driver.userId,
+          driverName: driver.name,
+        });
+        const preparedOrder = order.prepareUpdate(o => {
+          o.status = 'assigned';
+        });
+        await database.batch(preparedJob, preparedOrder);
       });
-
-      await order.markAssigned();
 
       enqueue({
         table: 'jobs',
-        recordId: newJob.id,
+        recordId: jobId,
         operation: 'upsert',
         data: {
-          id: newJob.id,
-          order_id: newJob.orderId,
-          owner_id: newJob.ownerId,
-          driver_id: newJob.driverId,
-          driver_name: newJob.driverName,
-          status: newJob.status,
+          id: jobId,
+          order_id: order.id,
+          owner_id: session.user.id,
+          driver_id: driver.userId,
+          driver_name: driver.name,
+          status: 'assigned',
         },
       });
       enqueue({

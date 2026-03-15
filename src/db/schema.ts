@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 2,
+  version: 3,
   tables: [
     tableSchema({
       name: 'owners',
@@ -24,8 +24,8 @@ export const schema = appSchema({
     tableSchema({
       name: 'drivers',
       columns: [
-        { name: 'user_id', type: 'string' },
-        { name: 'owner_id', type: 'string' },
+        { name: 'user_id', type: 'string', isIndexed: true },
+        { name: 'owner_id', type: 'string', isIndexed: true },
         { name: 'name', type: 'string' },
         { name: 'phone', type: 'string' },
         { name: 'is_active', type: 'boolean' },
@@ -58,7 +58,7 @@ export const schema = appSchema({
     tableSchema({
       name: 'orders',
       columns: [
-        { name: 'owner_id', type: 'string' },
+        { name: 'owner_id', type: 'string', isIndexed: true },
         { name: 'customer_name', type: 'string' },
         { name: 'customer_phone', type: 'string', isOptional: true },
         { name: 'pickup_address', type: 'string' },
@@ -70,7 +70,7 @@ export const schema = appSchema({
         { name: 'material_type', type: 'string' },
         { name: 'quantity_value', type: 'number', isOptional: true },
         { name: 'quantity_unit', type: 'string', isOptional: true },
-        { name: 'status', type: 'string' }, // pending | assigned | in_progress | completed | cancelled
+        { name: 'status', type: 'string', isIndexed: true }, // pending | assigned | in_progress | completed | cancelled
         { name: 'notes', type: 'string', isOptional: true },
         { name: 'scheduled_date', type: 'number', isOptional: true },
         { name: 'created_at', type: 'number' },
@@ -80,11 +80,11 @@ export const schema = appSchema({
     tableSchema({
       name: 'jobs',
       columns: [
-        { name: 'order_id', type: 'string' },
-        { name: 'owner_id', type: 'string' },
-        { name: 'driver_id', type: 'string' },
+        { name: 'order_id', type: 'string', isIndexed: true },
+        { name: 'owner_id', type: 'string', isIndexed: true },
+        { name: 'driver_id', type: 'string', isIndexed: true },
         { name: 'driver_name', type: 'string' }, // denormalized
-        { name: 'status', type: 'string' }, // assigned | accepted | picked_up | in_transit | delivered | rejected
+        { name: 'status', type: 'string', isIndexed: true }, // assigned | accepted | picked_up | in_transit | delivered | rejected
         { name: 'pickup_time', type: 'number', isOptional: true },
         { name: 'delivery_time', type: 'number', isOptional: true },
         { name: 'share_token', type: 'string', isOptional: true }, // V2: public tracking link

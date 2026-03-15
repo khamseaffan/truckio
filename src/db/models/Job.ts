@@ -27,6 +27,19 @@ export default class Job extends Model {
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
 
+  /** Returns a prepared (not yet committed) Job record for use inside an outer db.write() + batch() */
+  static prepareForOrder(db: Database, data: CreateJobData & { id?: string }) {
+    return db.get<Job>('jobs').prepareCreate(job => {
+      job._raw.id = data.id ?? randomUUID();
+      job.orderId = data.orderId;
+      job.ownerId = data.ownerId;
+      job.driverId = data.driverId;
+      job.driverName = data.driverName;
+      job.status = 'assigned';
+      job.shareToken = '';
+    });
+  }
+
   static async createForOrder(db: Database, data: CreateJobData): Promise<Job> {
     return db.write(async () => {
       return db.get<Job>('jobs').create(job => {

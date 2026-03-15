@@ -33,6 +33,11 @@ create policy "Owners can insert drivers"
   on public.drivers for insert
   with check (auth.uid() = owner_id);
 
+-- Drivers can self-register (onboarding: driver inserts their own row)
+create policy "Drivers can insert themselves"
+  on public.drivers for insert
+  with check (auth.uid() = user_id);
+
 create policy "Owners can update their drivers"
   on public.drivers for update
   using (auth.uid() = owner_id);
